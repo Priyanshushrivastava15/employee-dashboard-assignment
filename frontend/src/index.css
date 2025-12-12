@@ -2,12 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-background text-slate-800 antialiased;
-  font-family: 'Inter', sans-serif;
+:root {
+  /* Corporate Light */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --accent: #2563eb;
+  --border: #e2e8f0;
 }
 
-/* Glassmorphism Utility */
-.glass {
-  @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-lg;
+[data-theme='dark'] {
+  /* Standard Professional Dark */
+  --bg-primary: #020617;
+  --bg-secondary: #111827;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent: #3b82f6;
+  --border: #1e293b;
+}
+
+[data-theme='aurora'] {
+  /* MY SPECIAL THEME: "Quantum-Flux" */
+  --bg-primary: #050505; 
+  --bg-secondary: rgba(15, 15, 20, 0.6); /* Deep, dark glass */
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --accent: #00f0ff; /* Electric Cyan */
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  transition: all 0.5s ease;
+  overflow-x: hidden;
+}
+
+/* --- THE LIVING "QUANTUM" BACKGROUND --- */
+[data-theme='aurora'] body {
+  background: 
+    radial-gradient(circle at 0% 0%, rgba(76, 29, 149, 0.4), transparent 40%), 
+    radial-gradient(circle at 100% 0%, rgba(0, 240, 255, 0.2), transparent 40%), 
+    radial-gradient(circle at 100% 100%, rgba(236, 72, 153, 0.2), transparent 40%),
+    radial-gradient(circle at 0% 100%, rgba(34, 211, 238, 0.2), transparent 40%),
+    #050505; /* Deep Void Base */
+  background-size: 180% 180%;
+  animation: quantum-shift 20s ease-in-out infinite alternate;
+  background-attachment: fixed;
+}
+
+@keyframes quantum-shift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Glass Panels (Universal) */
+.glass-panel {
+  background: var(--bg-secondary);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Special "Hyper-Glass" Effects for Aurora Theme */
+[data-theme='aurora'] .glass-panel {
+  backdrop-filter: blur(30px) saturate(150%);
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Inner light ring */
+}
+
+/* --- UPDATED HOVER EFFECT HERE --- */
+[data-theme='aurora'] .glass-panel:hover {
+  transform: translateY(-4px) scale(1.01);
+  /* Ensure the border color itself is the requested white rgba */
+  border-color: rgba(255, 255, 255, 0.2);
+  /* Update the shadow glow to match */
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.6), /* Deep shadow for lift */
+    0 0 25px rgba(255, 255, 255, 0.2); /* <--- THE REQUESTED WHITE GLOW */
+}
+
+/* Scrollbar Polish */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 20px;
+}
+[data-theme='aurora'] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+[data-theme='aurora'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }

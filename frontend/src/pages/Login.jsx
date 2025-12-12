@@ -4,7 +4,7 @@ import { setCredentials } from '../redux/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
 import { request, gql } from 'graphql-request';
-import { config } from '../config'; // Import config for smart URL
+import { config } from '../config'; // <--- Ensure this is imported
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -30,21 +30,24 @@ const Login = () => {
         }
       `;
 
-      // Use config.API_URL instead of hardcoded localhost
-      const data = await request(config.API_URL, mutation, { username, password });
+      // FIX 1: Use config.API_URL (Dynamic URL)
+      // FIX 2: .trim() the username to remove accidental spaces
+      const data = await request(config.API_URL, mutation, { 
+        username: username.trim(), 
+        password 
+      });
       
-      // Save to Redux
       dispatch(setCredentials({ 
-        user: { username, role: data.login.role }, 
+        user: { username: username.trim(), role: data.login.role }, 
         token: data.login.token 
       }));
 
-      // Go to Dashboard
       navigate('/');
       
     } catch (err) {
       console.error(err);
-      setError('Invalid Credentials. Try admin / 123');
+      // More helpful error message
+      setError('Invalid Credentials. Please check for extra spaces.');
     } finally {
       setIsLoading(false);
     }

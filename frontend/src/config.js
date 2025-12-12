@@ -1,12 +1,11 @@
 // src/config.js
 
 // Automatically detect if we are running on localhost
-const isLocal = window.location.hostname === 'localhost';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 export const config = {
-  // If local, use port 5000. If deployed, use your Render URL.
-  // REPLACE 'your-app-name' below with your actual Render backend URL after deployment.
+  // If local, use localhost. If deployed, use your LIVE Render Backend.
   API_URL: isLocal 
     ? 'http://localhost:5000/graphql' 
-    : 'https://employee-management-backend.onrender.com/graphql', 
+    : 'https://my-emp-api-123.onrender.com/graphql', 
 };

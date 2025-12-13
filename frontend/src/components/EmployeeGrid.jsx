@@ -1,7 +1,6 @@
 import { Edit, Trash2, Flag, Eye } from 'lucide-react';
 
 const EmployeeGrid = ({ employees, flaggedIds, onDelete, onEdit, onFlag, onExpand, userRole }) => {
-  // 1. Header: "ID" instead of S.No to represent the real ID
   const headers = ['ID', 'Name', 'Role', 'Class', 'Age', 'Subjects', 'Attendance', 'Status', 'Performance', 'Actions'];
 
   const getPerformance = (attendance) => {
@@ -28,13 +27,13 @@ const EmployeeGrid = ({ employees, flaggedIds, onDelete, onEdit, onFlag, onExpan
             
             return (
               <tr key={emp.id} className="hover:bg-black/5 transition-colors">
-                {/* 2. REAL ID: Displays '1001', '1002' etc. */}
+                {/* DISPLAY REAL ID */}
                 <td className="p-4 font-mono font-bold text-xs opacity-70">
                   #{emp.employeeId || '...'}
                 </td>
                 
                 <td className="p-4 font-medium" style={{ color: 'var(--text-primary)' }}>{emp.name}</td>
-                <td className="p-4">Student</td>
+                <td className="p-4">Employee</td> {/* <--- CHANGED FROM STUDENT */}
                 <td className="p-4">{emp.class}</td>
                 <td className="p-4">{emp.age}</td>
                 

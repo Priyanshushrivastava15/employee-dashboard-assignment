@@ -39,7 +39,7 @@ export const employeeApi = createApi({
   tagTypes: ['Employee', 'Class'],
   endpoints: (builder) => ({
 
-    // --- 1. HEALTH CHECK QUERY (Required for StatusCheck.jsx) ---
+    // The health query (not strictly necessary but left for robustness)
     getHealth: builder.query({
       query: () => ({
         document: gql`
@@ -50,11 +50,12 @@ export const employeeApi = createApi({
       }),
     }),
     
-    // --- 2. QUERY EMPLOYEE DATA ---
+    // --- 2. QUERY EMPLOYEE DATA (FIXED) ---
     getEmployees: builder.query({
       query: ({ page, limit, sortBy, filter }) => ({
+        // FIXED: Changed "EmployeeFilterInput" to "EmployeeFilter"
         document: gql`
-          query GetEmployees($page: Int, $limit: Int, $sortBy: String, $filter: EmployeeFilterInput) {
+          query GetEmployees($page: Int, $limit: Int, $sortBy: String, $filter: EmployeeFilter) {
             getEmployees(page: $page, limit: $limit, sortBy: $sortBy, filter: $filter) {
               employees {
                 id
@@ -64,8 +65,7 @@ export const employeeApi = createApi({
                 class
                 subjects
                 attendance
-                status
-                performance
+                # Removed status and performance fields to match schema
               }
               totalPages
               currentPage

@@ -1,73 +1,96 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
-import { request, gql } from 'graphql-request';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { gql } from 'graphql-request';
 import { config } from '../../config';
 
-const graphqlBaseQuery = ({ baseUrl }) => async ({ body, variables }) => {
-  const token = JSON.parse(localStorage.getItem('token') || 'null');
-  
+// Custom base query function for GraphQL
+const graphqlBaseQuery = ({ baseUrl }) => async ({ document, variables, customHeaders }) => {
+  const endpoint = `${baseUrl}/graphql`;
   try {
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const result = await request(baseUrl, body, variables, headers);
-    return { data: result };
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...customHeaders,
+      },
+      body: JSON.stringify({
+        query: document,
+        variables,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.errors) {
+      // RTK Query expects the error to be in the error object, not the data
+      return { error: result.errors[0] || { message: 'An unknown GraphQL error occurred.' } };
+    }
+
+    // RTK Query expects the data to be in the data object
+    return { data: result.data };
+
   } catch (error) {
-    // FIX: Simplified error object to ensure Redux never crashes
-    return { 
-      error: { 
-        status: 500, 
-        message: error.message || 'Unknown Error',
-        // Only include safe properties
-        errors: error.response?.errors || [] 
-      } 
-    };
+    return { error: { status: 'FETCH_ERROR', message: error.message || 'Network request failed' } };
   }
 };
 
 export const employeeApi = createApi({
   reducerPath: 'employeeApi',
   baseQuery: graphqlBaseQuery({ baseUrl: config.API_URL }),
-  tagTypes: ['Employees', 'Employee', 'Classes'], 
+  tagTypes: ['Employee', 'Class'],
   endpoints: (builder) => ({
-    getHealth: builder.query({ query: () => ({ body: gql`query Health { health }` }) }),
-    
-    // FETCH UNIQUE CLASSES
-    getUniqueClasses: builder.query({
-      query: () => ({
-        body: gql`query GetClasses { getUniqueClasses }`
-      }),
-      providesTags: ['Classes'], 
-    }),
 
-    // FETCH EMPLOYEES (With employeeId)
+    // --- 1. HEALTH CHECK QUERY (Required for StatusCheck.jsx) ---
+    getHealth: builder.query({
+      query: () => ({
+        document: gql`
+          query Health {
+            health
+          }
+        `,
+      }),
+    }),
+    
+    // --- 2. QUERY EMPLOYEE DATA ---
     getEmployees: builder.query({
-      query: ({ page, limit, filter, sortBy }) => ({
-        body: gql`
-          query GetEmployees($page: Int, $limit: Int, $filter: EmployeeFilter, $sortBy: String) {
-            getEmployees(page: $page, limit: $limit, filter: $filter, sortBy: $sortBy) {
-              employees { 
-                id 
-                employeeId  
-                name 
-                age 
-                class 
-                subjects 
-                attendance 
+      query: ({ page, limit, sortBy, filter }) => ({
+        document: gql`
+          query GetEmployees($page: Int, $limit: Int, $sortBy: String, $filter: EmployeeFilterInput) {
+            getEmployees(page: $page, limit: $limit, sortBy: $sortBy, filter: $filter) {
+              employees {
+                id
+                employeeId
+                name
+                age
+                class
+                subjects
+                attendance
+                status
+                performance
               }
-              totalCount
               totalPages
               currentPage
+              totalCount
             }
           }
         `,
-        variables: { page, limit, filter, sortBy },
+        variables: { page, limit, sortBy, filter },
       }),
-      providesTags: ['Employees'],
+      providesTags: ['Employee'],
     }),
 
     getEmployee: builder.query({
       query: (id) => ({
-        body: gql`
+        document: gql`
           query GetEmployee($id: ID!) {
-            getEmployee(id: $id) { id employeeId name age class subjects attendance }
+            getEmployee(id: $id) {
+              id
+              employeeId
+              name
+              age
+              class
+              subjects
+              attendance
+            }
           }
         `,
         variables: { id },
@@ -75,46 +98,78 @@ export const employeeApi = createApi({
       providesTags: (result, error, id) => [{ type: 'Employee', id }],
     }),
     
-    addEmployee: builder.mutation({
-      query: (employee) => ({
-        body: gql`
-          mutation AddEmployee($name: String!, $age: Int!, $class: String!, $subjects: [String]!, $attendance: Float!) {
-            addEmployee(name: $name, age: $age, class: $class, subjects: $subjects, attendance: $attendance) { id }
+    // --- 3. DYNAMIC FILTER QUERY ---
+    getUniqueClasses: builder.query({
+      query: () => ({
+        document: gql`
+          query GetUniqueClasses {
+            getUniqueClasses
           }
         `,
-        variables: employee,
       }),
-      invalidatesTags: ['Employees', 'Classes'], 
+      providesTags: ['Class'],
+    }),
+
+    // --- 4. MUTATIONS (ADMIN ONLY) ---
+    addEmployee: builder.mutation({
+      query: (employeeData) => ({
+        document: gql`
+          mutation AddEmployee($input: EmployeeInput!) {
+            addEmployee(input: $input) {
+              id
+              name
+            }
+          }
+        `,
+        variables: { input: employeeData },
+        customHeaders: { 
+            Authorization: `Bearer ${localStorage.getItem('token')}` 
+        }
+      }),
+      invalidatesTags: ['Employee', 'Class'],
     }),
 
     updateEmployee: builder.mutation({
-      query: ({ id, ...updates }) => ({
-        body: gql`
-          mutation UpdateEmployee($id: ID!, $name: String, $age: Int, $class: String, $subjects: [String], $attendance: Float) {
-            updateEmployee(id: $id, name: $name, age: $age, class: $class, subjects: $subjects, attendance: $attendance) { id }
+      query: ({ id, ...employeeData }) => ({
+        document: gql`
+          mutation UpdateEmployee($id: ID!, $input: EmployeeUpdateInput!) {
+            updateEmployee(id: $id, input: $input) {
+              id
+              name
+            }
           }
         `,
-        variables: { id, ...updates },
+        variables: { id, input: employeeData },
+        customHeaders: { 
+            Authorization: `Bearer ${localStorage.getItem('token')}` 
+        }
       }),
-      invalidatesTags: (result, error, { id }) => ['Employees', { type: 'Employee', id }, 'Classes'],
+      invalidatesTags: (result, error, { id }) => ['Employee', { type: 'Employee', id }, 'Class'],
     }),
 
     deleteEmployee: builder.mutation({
       query: (id) => ({
-        body: gql`mutation Delete($id: ID!) { deleteEmployee(id: $id) }`,
-        variables: { id }
+        document: gql`
+          mutation DeleteEmployee($id: ID!) {
+            deleteEmployee(id: $id)
+          }
+        `,
+        variables: { id },
+        customHeaders: { 
+            Authorization: `Bearer ${localStorage.getItem('token')}` 
+        }
       }),
-      invalidatesTags: ['Employees', 'Classes'],
+      invalidatesTags: ['Employee', 'Class'],
     }),
   }),
 });
 
-export const { 
-  useGetHealthQuery, 
-  useGetEmployeesQuery, 
-  useGetEmployeeQuery, 
-  useGetUniqueClassesQuery, 
-  useAddEmployeeMutation, 
-  useUpdateEmployeeMutation, 
-  useDeleteEmployeeMutation 
+export const {
+  useGetHealthQuery,
+  useGetEmployeesQuery,
+  useGetEmployeeQuery,
+  useGetUniqueClassesQuery,
+  useAddEmployeeMutation,
+  useUpdateEmployeeMutation,
+  useDeleteEmployeeMutation,
 } = employeeApi;

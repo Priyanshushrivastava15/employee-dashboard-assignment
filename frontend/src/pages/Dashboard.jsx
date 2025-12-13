@@ -13,7 +13,8 @@ import Sidebar from '../components/Sidebar';
 import EmployeeGrid from '../components/EmployeeGrid';
 import EmployeeTile from '../components/EmployeeTile';
 import Modal from '../components/Modal';
-import { Plus, X, Search, Filter, ArrowUpDown, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+// ADDED Loader2 to imports
+import { Plus, X, Search, Filter, ArrowUpDown, ChevronLeft, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 import { setSidebar, setPage, toggleFlag } from '../redux/slices/uiSlice';
 
 // --- Single Employee Detail View (Popup) ---
@@ -90,12 +91,11 @@ function Dashboard() {
   const currentPage = Number(page) || 1;
   const startIndex = (currentPage - 1) * LIMIT;
   
-  // Local State for Search/Sort/Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [sortBy, setSortBy] = useState('name');
 
-  // 1. Fetch Employees (With Search & Filter)
+  // Query Employees
   const { data, isLoading, error } = useGetEmployeesQuery({ 
     page: currentPage, 
     limit: LIMIT,
@@ -106,14 +106,19 @@ function Dashboard() {
     }
   });
 
-  // 2. Fetch Unique Classes for the Dropdown
+  // Query Unique Classes
   const { data: classData } = useGetUniqueClassesQuery();
   const availableClasses = classData?.getUniqueClasses || [];
 
-  const [deleteEmployee] = useDeleteEmployeeMutation();
-  const [addEmployee] = useAddEmployeeMutation();
-  const [updateEmployee] = useUpdateEmployeeMutation();
+  // --- START UX IMPROVEMENT: Mutation Loading States ---
+  const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation();
+  const [addEmployee, { isLoading: isAdding }] = useAddEmployeeMutation();
+  const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation();
   
+  // Combine mutation loading states for button control
+  const isMutationLoading = isAdding || isUpdating || isDeleting;
+  // --- END UX IMPROVEMENT ---
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedEmpId, setExpandedEmpId] = useState(null);
   const [editingId, setEditingId] = useState(null); 
@@ -168,6 +173,8 @@ function Dashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isMutationLoading) return; // Prevent double submission
+
     try {
       const subjectsArray = formData.subjects.split(',').map(s => s.trim()).filter(s => s.length > 0);
       const payload = {
@@ -181,21 +188,23 @@ function Dashboard() {
       if (editingId) await updateEmployee({ id: editingId, ...payload }).unwrap();
       else await addEmployee(payload).unwrap();
       setIsModalOpen(false);
+      // Optional: Add a subtle success notification state here if implementing one
     } catch (err) {
       console.error(err);
       alert("Operation failed. Check inputs.");
     }
   };
 
-  // --- Loading State ---
+  // --- IMPROVED INITIAL LOADING STATE ---
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      <div className="w-10 h-10 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-      <p>Loading System...</p>
+      <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
+      <p>Fetching Employee Data...</p>
     </div>
   );
+  // --- END IMPROVED LOADING STATE ---
 
-  // --- Error State (Detailed) ---
+  // Error State remains the same...
   if (error) {
     console.error("Dashboard Error:", error);
     return (
@@ -247,7 +256,7 @@ function Dashboard() {
               )}
             </div>
 
-            {/* --- FILTERS BAR --- */}
+            {/* --- FILTERS BAR (Unchanged) --- */}
             <div 
               className="flex flex-wrap items-center gap-4 p-4 rounded-xl border backdrop-blur-sm"
               style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
@@ -305,7 +314,7 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* --- CONTENT AREA --- */}
+          {/* --- CONTENT AREA (Unchanged) --- */}
           {isEmpty ? (
             <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl border border-dashed" style={{ borderColor: 'var(--border)' }}>
               <p className="opacity-50" style={{ color: 'var(--text-secondary)' }}>No records found matching your criteria.</p>
@@ -340,7 +349,7 @@ function Dashboard() {
             </div>
           )}
 
-          {/* --- PAGINATION --- */}
+          {/* --- PAGINATION (Unchanged) --- */}
           {!isEmpty && (
             <div className="flex justify-center items-center gap-6 mt-12">
               <button onClick={() => dispatch(setPage(Math.max(1, currentPage - 1)))} disabled={currentPage === 1} className="p-3 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all" style={{ color: 'var(--text-primary)' }}><ChevronLeft size={24} /></button>
@@ -356,12 +365,29 @@ function Dashboard() {
         <form onSubmit={handleSubmit} className="space-y-5">
            <input required placeholder="Full Name" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
            <div className="grid grid-cols-2 gap-4">
-              <input type="number" required placeholder="Age" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }} value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
+              <input type="number" required placeholder="Age" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }} value={formData.age} onChange={e => setFormData({...formData.age})} />
               <input required placeholder="Class" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }} value={formData.class} onChange={e => setFormData({...formData, class: e.target.value})} />
            </div>
            <input required placeholder="Subjects (e.g. Math, Science)" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }} value={formData.subjects} onChange={e => setFormData({...formData, subjects: e.target.value})} />
            <input type="number" required placeholder="Attendance %" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }} value={formData.attendance} onChange={e => setFormData({...formData, attendance: e.target.value})} />
-           <button type="submit" className="w-full py-4 rounded-xl font-bold text-white shadow-lg" style={{ background: 'var(--accent)' }}>Confirm Action</button>
+           
+           {/* --- UX IMPROVEMENT: SUBMIT BUTTON WITH LOADING STATE --- */}
+           <button 
+             type="submit" 
+             disabled={isMutationLoading} 
+             className="w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity" 
+             style={{ background: 'var(--accent)' }}
+           >
+             {isAdding || isUpdating ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  {editingId ? "Updating Record..." : "Adding Record..."}
+                </>
+             ) : (
+                "Confirm Action"
+             )}
+           </button>
+           {/* --- END UX IMPROVEMENT --- */}
         </form>
       </Modal>
     </div>

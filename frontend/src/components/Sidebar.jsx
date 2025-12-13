@@ -9,10 +9,10 @@ const Sidebar = () => {
   const [openMenu, setOpenMenu] = useState(null);
 
   const menuItems = [
-    { title: 'Dashboard', icon: Home, subItems: ['Overview', 'Analytics'] },
-    { title: 'Employees', icon: Users, subItems: ['All Staff', 'Attendance', 'Leaves'] },
-    { title: 'Reports', icon: FileText, subItems: ['Payroll', 'Performance'] },
-    { title: 'System', icon: Settings, subItems: ['Roles', 'Settings'] },
+    { title: 'Dashboard', icon: Home, subItems: ['Overview', 'Analytics', 'Real-time'] },
+    { title: 'Employees', icon: Users, subItems: ['All Staff', 'Attendance', 'Leaves', 'Departments'] },
+    { title: 'Reports', icon: FileText, subItems: ['Payroll', 'Performance', 'Audit Logs'] },
+    { title: 'System', icon: Settings, subItems: ['Roles', 'Global Settings'] },
   ];
 
   return (
@@ -32,8 +32,8 @@ const Sidebar = () => {
         `}
         style={{ 
           backgroundColor: 'var(--bg-secondary)', 
-          borderColor: 'var(--border)',
-          color: 'var(--text-primary)'
+          borderColor: 'var(--border)', 
+          color: 'var(--text-primary)' 
         }}
       >
         {/* HEADER */}
@@ -110,7 +110,12 @@ const Sidebar = () => {
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSidebarOpen && openMenu === item.title ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
                 <div className="ml-12 border-l-2 space-y-1 py-1" style={{ borderColor: 'var(--border)' }}>
                   {item.subItems.map((sub) => (
-                    <button key={sub} className="block w-full text-left py-2 px-3 text-sm rounded-lg hover:text-[var(--accent)] transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                    <button 
+                        key={sub} 
+                        onClick={() => alert(`Navigating to ${sub}... (Placeholder)`)}
+                        className="block w-full text-left py-2 px-3 text-sm rounded-lg hover:text-[var(--accent)] transition-colors" 
+                        style={{ color: 'var(--text-secondary)' }}
+                    >
                       {sub}
                     </button>
                   ))}

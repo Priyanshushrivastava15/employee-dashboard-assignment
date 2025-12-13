@@ -3,7 +3,6 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Helper for Auth Check
 const checkAuth = (context) => {
   if (!context.user || context.user.role !== 'admin') {
     throw new Error('Not Authorized');
@@ -14,17 +13,32 @@ const resolvers = {
   Query: {
     health: () => "Server is Awake!",
     
+    getUniqueClasses: async () => {
+      const classes = await Employee.distinct('class');
+      return classes.sort(); 
+    },
+
     getEmployees: async (_, { page = 1, limit = 10, sortBy = 'name', filter }) => {
       const query = {};
       
-      // Filtering Logic
       if (filter) {
-        if (filter.class) query.class = filter.class;
+        if (filter.class) query.class = { $regex: filter.class, $options: 'i' };
         if (filter.minAttendance) query.attendance = { $gte: filter.minAttendance };
-        if (filter.searchName) query.name = { $regex: filter.searchName, $options: 'i' };
+        
+        if (filter.searchName) {
+          const searchRegex = { $regex: filter.searchName, $options: 'i' };
+          
+          // --- THE FIX IS HERE ---
+          // Removed "$in: [...]" which caused the CastError.
+          // Directly applying regex to the array field works correctly in Mongoose.
+          query.$or = [
+            { name: searchRegex },
+            { class: searchRegex },
+            { subjects: searchRegex } 
+          ];
+        }
       }
 
-      // Pagination & Sorting Logic
       const totalCount = await Employee.countDocuments(query);
       const employees = await Employee.find(query)
         .sort(sortBy) 
@@ -42,7 +56,6 @@ const resolvers = {
   },
 
   Mutation: {
-    // --- Auth Mutations ---
     register: async (_, { username, password, role }) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({ username, password: hashedPassword, role });
@@ -60,11 +73,13 @@ const resolvers = {
       return { token, role: user.role };
     },
 
-    // --- Employee Mutations ---
     addEmployee: async (_, args, context) => {
       checkAuth(context); 
-      return await Employee.create(args);
+      const lastEmployee = await Employee.findOne().sort({ employeeId: -1 });
+      const nextId = lastEmployee && lastEmployee.employeeId ? lastEmployee.employeeId + 1 : 1001;
+      return await Employee.create({ ...args, employeeId: nextId });
     },
+    
     updateEmployee: async (_, { id, ...updates }, context) => {
       checkAuth(context);
       return await Employee.findByIdAndUpdate(id, updates, { new: true });

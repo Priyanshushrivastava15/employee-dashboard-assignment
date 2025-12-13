@@ -25,10 +25,10 @@
 [data-theme='aurora'] {
   /* MY SPECIAL THEME: "Quantum-Flux" */
   --bg-primary: #050505; 
-  --bg-secondary: rgba(15, 15, 20, 0.6); /* Deep, dark glass */
+  --bg-secondary: rgba(15, 15, 20, 0.6); 
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
-  --accent: #00f0ff; /* Electric Cyan */
+  --accent: #00f0ff; 
   --border: rgba(255, 255, 255, 0.08);
 }
 
@@ -47,7 +47,7 @@ body {
     radial-gradient(circle at 100% 0%, rgba(0, 240, 255, 0.2), transparent 40%), 
     radial-gradient(circle at 100% 100%, rgba(236, 72, 153, 0.2), transparent 40%),
     radial-gradient(circle at 0% 100%, rgba(34, 211, 238, 0.2), transparent 40%),
-    #050505; /* Deep Void Base */
+    #050505; 
   background-size: 180% 180%;
   animation: quantum-shift 20s ease-in-out infinite alternate;
   background-attachment: fixed;
@@ -74,34 +74,32 @@ body {
   backdrop-filter: blur(30px) saturate(150%);
   box-shadow: 
     0 4px 30px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Inner light ring */
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* --- UPDATED HOVER EFFECT HERE --- */
+/* --- 1. DEFAULT BEHAVIOR (For Table/Grid) - GLOW ONLY, NO MOVEMENT --- */
 [data-theme='aurora'] .glass-panel:hover {
-  transform: translateY(-4px) scale(1.01);
-  /* Ensure the border color itself is the requested white rgba */
+  transform: none; /* Force Stationary */
   border-color: rgba(255, 255, 255, 0.2);
-  /* Update the shadow glow to match */
   box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.6), /* Deep shadow for lift */
-    0 0 25px rgba(255, 255, 255, 0.2); /* <--- THE REQUESTED WHITE GLOW */
+    0 4px 30px rgba(0, 0, 0, 0.5), /* Keep base shadow */
+    0 0 25px rgba(255, 255, 255, 0.2); /* Add White Glow */
 }
 
-/* Scrollbar Polish */
-::-webkit-scrollbar {
-  width: 6px;
+/* --- 2. ANIMATED BEHAVIOR (For Tiles) - ZOOM + LIFT + GLOW --- */
+/* We will add the 'glass-animate' class to tiles only */
+[data-theme='aurora'] .glass-panel.glass-animate:hover {
+  transform: translateY(-6px) scale(1.02); /* Restore Zoom & Lift */
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.6), 
+    0 0 30px rgba(255, 255, 255, 0.25); /* Stronger Glow */
+  z-index: 10;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 20px;
-}
-[data-theme='aurora'] ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-}
-[data-theme='aurora'] ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 20px; }
+[data-theme='aurora'] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+[data-theme='aurora'] ::-webkit-scrollbar-thumb:hover { background: var(--accent); }

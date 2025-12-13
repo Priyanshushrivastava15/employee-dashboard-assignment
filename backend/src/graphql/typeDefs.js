@@ -3,6 +3,7 @@ const { gql } = require('apollo-server-express');
 const typeDefs = gql`
   type Employee {
     id: ID!
+    employeeId: Int  # <--- NEW FIELD
     name: String!
     age: Int!
     class: String!
@@ -32,6 +33,7 @@ const typeDefs = gql`
     health: String
     getEmployees(page: Int, limit: Int, sortBy: String, filter: EmployeeFilter): EmployeeResponse!
     getEmployee(id: ID!): Employee
+    getUniqueClasses: [String]! # <--- NEW QUERY
   }
 
   type Mutation {

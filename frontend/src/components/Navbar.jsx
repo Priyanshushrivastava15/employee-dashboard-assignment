@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, LogOut, Sun, Moon, Zap, ChevronDown, LayoutGrid, List } from 'lucide-react';
+import { Menu, LogOut, Sun, Moon, Zap, LayoutGrid, List, HelpCircle, FileText, MessageSquare } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setTheme, toggleSidebar, toggleViewMode } from '../redux/slices/uiSlice';
 import { logout } from '../redux/slices/authSlice';
@@ -13,12 +13,18 @@ const Navbar = () => {
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Requirement: Horizontal Navigation Menu Items
+  const topNavItems = [
+    { label: 'Documentation', icon: FileText },
+    { label: 'Support', icon: HelpCircle },
+    { label: 'Feedback', icon: MessageSquare },
+  ];
+
   return (
     <nav className="glass-panel sticky top-4 mx-4 md:mx-6 rounded-2xl z-40 px-4 md:px-6 h-16 flex items-center justify-between transition-all duration-300 mt-4 mb-6">
       
-      {/* LEFT: Mobile Menu & Breadcrumb */}
-      <div className="flex items-center gap-3 md:gap-4">
-        {/* Mobile Toggle */}
+      {/* LEFT: Mobile Toggle & Title */}
+      <div className="flex items-center gap-3 md:gap-4 shrink-0">
         <button 
           onClick={() => dispatch(toggleSidebar())} 
           className="md:hidden p-2 rounded-lg hover:bg-black/5 transition-colors"
@@ -27,17 +33,31 @@ const Navbar = () => {
           <Menu size={24} />
         </button>
         
-        {/* Title - Hide subtext on mobile to save space */}
         <div className="flex flex-col">
           <span className="hidden md:block text-xs font-bold uppercase tracking-wider opacity-50" style={{ color: 'var(--text-secondary)' }}>Dashboard</span>
           <span className="text-lg font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>Overview</span>
         </div>
       </div>
 
-      {/* RIGHT: Actions */}
-      <div className="flex items-center gap-2">
+      {/* CENTER: Horizontal Navigation (Satisfies Requirement) */}
+      <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+        {topNavItems.map((item) => (
+          <button 
+            key={item.label}
+            onClick={() => alert(`Open ${item.label} page...`)}
+            className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 group hover:bg-black/5"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <item.icon size={16} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+            <span className="group-hover:text-[var(--accent)] transition-colors">{item.label}</span>
+          </button>
+        ))}
+      </div>
 
-        {/* View Switcher - Now visible on mobile */}
+      {/* RIGHT: Actions */}
+      <div className="flex items-center gap-2 shrink-0">
+
+        {/* View Switcher */}
         <div className="flex bg-black/5 p-1 rounded-full border" style={{ borderColor: 'var(--border)' }}>
           <button 
             onClick={() => dispatch(toggleViewMode())}
@@ -46,6 +66,7 @@ const Navbar = () => {
               backgroundColor: viewMode === 'grid' ? 'var(--bg-primary)' : 'transparent',
               color: viewMode === 'grid' ? 'var(--accent)' : 'var(--text-secondary)'
             }}
+            title="List View"
           >
             <List size={16} />
           </button>
@@ -56,12 +77,13 @@ const Navbar = () => {
               backgroundColor: viewMode === 'tile' ? 'var(--bg-primary)' : 'transparent',
               color: viewMode === 'tile' ? 'var(--accent)' : 'var(--text-secondary)'
             }}
+            title="Tile View"
           >
             <LayoutGrid size={16} />
           </button>
         </div>
         
-        {/* Theme Switcher */}
+        {/* Theme Switcher (Desktop) */}
         <div className="hidden sm:flex bg-black/5 p-1 rounded-full border" style={{ borderColor: 'var(--border)' }}>
           {[
              { id: 'light', icon: Sun },
@@ -82,7 +104,7 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* Mobile Theme Toggle (Simple Cycle) - To save space on phones */}
+        {/* Mobile Theme Toggle */}
         <button 
            className="sm:hidden p-2 rounded-full border bg-black/5" 
            style={{ borderColor: 'var(--border)', color: 'var(--accent)' }}
@@ -91,7 +113,7 @@ const Navbar = () => {
            {theme === 'light' ? <Sun size={18} /> : theme === 'dark' ? <Moon size={18} /> : <Zap size={18} />}
         </button>
 
-        {/* User Profile - Compact on mobile */}
+        {/* User Profile */}
         <div className="relative">
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}

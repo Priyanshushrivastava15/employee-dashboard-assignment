@@ -247,13 +247,13 @@ function Dashboard() {
               )}
             </div>
 
-            {/* --- FILTERS BAR --- */}
+            {/* --- FILTERS BAR (RESPONSIVE FIX) --- */}
             <div 
               className="flex flex-wrap items-center gap-4 p-4 rounded-xl border backdrop-blur-sm"
               style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
             >
-               {/* Search Input */}
-               <div className="relative group flex-1 min-w-[200px]">
+               {/* Search Input: w-full on mobile, flex-1 on SM+ */}
+               <div className="relative group w-full sm:flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-[var(--accent)]" size={18} />
                   <input 
                     type="text" 
@@ -268,13 +268,14 @@ function Dashboard() {
                <div className="h-8 w-px bg-[var(--border)] hidden sm:block"></div>
 
                {/* Class Filter */}
-               <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+               <div className="flex items-center gap-2 text-sm font-medium shrink-0" style={{ color: 'var(--text-secondary)' }}>
                  <Filter size={16} />
                  <span>Filter:</span>
                </div>
                
                <select 
-                 className="p-2 rounded-lg border text-sm outline-none focus:ring-2 cursor-pointer min-w-[140px]"
+                 // Make select w-full on mobile, auto width on SM+
+                 className="p-2 rounded-lg border text-sm outline-none focus:ring-2 cursor-pointer w-full sm:w-auto min-w-[140px]"
                  style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                  value={filterClass}
                  onChange={(e) => { setFilterClass(e.target.value); dispatch(setPage(1)); }}
@@ -285,14 +286,15 @@ function Dashboard() {
                  ))}
                </select>
 
-               {/* Sort Dropdown */}
-               <div className="flex items-center gap-2 text-sm font-medium ml-2" style={{ color: 'var(--text-secondary)' }}>
+               {/* Sort Dropdown: Removed unnecessary ml-2 */}
+               <div className="flex items-center gap-2 text-sm font-medium shrink-0" style={{ color: 'var(--text-secondary)' }}>
                  <ArrowUpDown size={16} />
                  <span>Sort:</span>
                </div>
 
                <select 
-                 className="p-2 rounded-lg border text-sm outline-none focus:ring-2 cursor-pointer min-w-[140px]"
+                 // Make select w-full on mobile, auto width on SM+
+                 className="p-2 rounded-lg border text-sm outline-none focus:ring-2 cursor-pointer w-full sm:w-auto min-w-[140px]"
                  style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                  value={sortBy}
                  onChange={(e) => setSortBy(e.target.value)}

@@ -21,11 +21,9 @@ const graphqlBaseQuery = ({ baseUrl }) => async ({ document, variables, customHe
     const result = await response.json();
 
     if (result.errors) {
-      // RTK Query expects the error to be in the error object, not the data
       return { error: result.errors[0] || { message: 'An unknown GraphQL error occurred.' } };
     }
 
-    // RTK Query expects the data to be in the data object
     return { data: result.data };
 
   } catch (error) {
@@ -39,7 +37,7 @@ export const employeeApi = createApi({
   tagTypes: ['Employee', 'Class'],
   endpoints: (builder) => ({
 
-    // --- 1. HEALTH CHECK QUERY (Required for StatusCheck.jsx) ---
+    // Health query
     getHealth: builder.query({
       query: () => ({
         document: gql`
@@ -50,10 +48,9 @@ export const employeeApi = createApi({
       }),
     }),
     
-    // --- 2. QUERY EMPLOYEE DATA (Fixed and Cleaned) ---
+    // QUERY EMPLOYEE DATA (Fixed Input Type: EmployeeFilter)
     getEmployees: builder.query({
       query: ({ page, limit, sortBy, filter }) => ({
-        // FIXED: Using "EmployeeFilter" (as defined in typeDefs.js)
         document: gql`
           query GetEmployees($page: Int, $limit: Int, $sortBy: String, $filter: EmployeeFilter) {
             getEmployees(page: $page, limit: $limit, sortBy: $sortBy, filter: $filter) {
@@ -65,7 +62,6 @@ export const employeeApi = createApi({
                 class
                 subjects
                 attendance
-                # Removed status and performance fields to match the schema
               }
               totalPages
               currentPage
@@ -110,55 +106,83 @@ export const employeeApi = createApi({
       providesTags: ['Class'],
     }),
 
-    // Mutations
+    // --- MUTATIONS (FINAL FIX: Dynamic Token Retrieval AND Parsing) ---
     addEmployee: builder.mutation({
-      query: (employeeData) => ({
-        document: gql`
-          mutation AddEmployee($input: EmployeeInput!) {
-            addEmployee(input: $input) {
-              id
-              name
+      query: (employeeData) => {
+        let token = localStorage.getItem('token');
+        if (token) {
+            try {
+                // CRITICAL FIX: Parse the token string from localStorage JSON
+                token = JSON.parse(token); 
+            } catch (e) {
+                token = null; 
             }
-          }
-        `,
-        variables: { input: employeeData },
-        customHeaders: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}` 
         }
-      }),
+        
+        return ({
+          document: gql`
+            mutation AddEmployee($name: String!, $age: Int!, $class: String!, $subjects: [String]!, $attendance: Float!) {
+              addEmployee(name: $name, age: $age, class: $class, subjects: $subjects, attendance: $attendance) {
+                id
+                name
+              }
+            }
+          `,
+          variables: employeeData,
+          customHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+      },
       invalidatesTags: ['Employee', 'Class'],
     }),
 
     updateEmployee: builder.mutation({
-      query: ({ id, ...employeeData }) => ({
-        document: gql`
-          mutation UpdateEmployee($id: ID!, $input: EmployeeUpdateInput!) {
-            updateEmployee(id: $id, input: $input) {
-              id
-              name
+      query: ({ id, ...employeeData }) => {
+        let token = localStorage.getItem('token');
+        if (token) {
+            try {
+                // CRITICAL FIX: Parse the token string from localStorage JSON
+                token = JSON.parse(token); 
+            } catch (e) {
+                token = null; 
             }
-          }
-        `,
-        variables: { id, input: employeeData },
-        customHeaders: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}` 
         }
-      }),
+        return ({
+          document: gql`
+            mutation UpdateEmployee($id: ID!, $name: String, $age: Int, $class: String, $subjects: [String], $attendance: Float) {
+              updateEmployee(id: $id, name: $name, age: $age, class: $class, subjects: $subjects, attendance: $attendance) {
+                id
+                name
+              }
+            }
+          `,
+          variables: { id, ...employeeData },
+          customHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+      },
       invalidatesTags: (result, error, { id }) => ['Employee', { type: 'Employee', id }, 'Class'],
     }),
 
     deleteEmployee: builder.mutation({
-      query: (id) => ({
-        document: gql`
-          mutation DeleteEmployee($id: ID!) {
-            deleteEmployee(id: $id)
-          }
-        `,
-        variables: { id },
-        customHeaders: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}` 
+      query: (id) => {
+        let token = localStorage.getItem('token');
+        if (token) {
+            try {
+                // CRITICAL FIX: Parse the token string from localStorage JSON
+                token = JSON.parse(token); 
+            } catch (e) {
+                token = null; 
+            }
         }
-      }),
+        return ({
+          document: gql`
+            mutation DeleteEmployee($id: ID!) {
+              deleteEmployee(id: $id)
+            }
+          `,
+          variables: { id },
+          customHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+      },
       invalidatesTags: ['Employee', 'Class'],
     }),
   }),

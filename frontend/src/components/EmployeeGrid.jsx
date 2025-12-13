@@ -27,36 +27,29 @@ const EmployeeGrid = ({ employees, flaggedIds, onDelete, onEdit, onFlag, onExpan
             
             return (
               <tr key={emp.id} className="hover:bg-black/5 transition-colors">
-                {/* DISPLAY REAL ID */}
+                {/* FIX: Removed line breaks between <td> elements */}
                 <td className="p-4 font-mono font-bold text-xs opacity-70">
                   #{emp.employeeId || '...'}
-                </td>
-                
-                <td className="p-4 font-medium" style={{ color: 'var(--text-primary)' }}>{emp.name}</td>
-                <td className="p-4">Employee</td> {/* <--- CHANGED FROM STUDENT */}
+                </td><td className="p-4 font-medium" style={{ color: 'var(--text-primary)' }}>{emp.name}</td>
+                <td className="p-4">Employee</td> 
                 <td className="p-4">{emp.class}</td>
                 <td className="p-4">{emp.age}</td>
-                
                 <td className="p-4 max-w-[200px] truncate" title={emp.subjects ? emp.subjects.join(', ') : ''}>
                   {emp.subjects ? emp.subjects.join(', ') : ''}
                 </td>
-                
                 <td className="p-4">
                   <div className={`font-bold ${emp.attendance >= 75 ? 'text-green-500' : 'text-red-500'}`}>
                     {emp.attendance}%
                   </div>
                 </td>
-
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded text-xs ${emp.attendance >= 75 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {emp.attendance >= 75 ? 'Active' : 'At Risk'}
                   </span>
                 </td>
-                
                 <td className={`p-4 font-semibold ${perf.color}`}>
                   {perf.label}
                 </td>
-
                 <td className="p-4">
                   <div className="flex gap-2">
                     <button onClick={() => onExpand(emp)} title="View Details" className="p-1.5 hover:text-[var(--accent)] transition-colors"><Eye size={16}/></button>

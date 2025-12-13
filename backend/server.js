@@ -4,16 +4,34 @@ const { ApolloServer } = require('apollo-server-express');
 const cors = require('cors'); 
 const jwt = require('jsonwebtoken');
 
-// CORRECT PATHS for root-level server.js
+// CORRECT PATHS
 const connectDB = require('./src/config/db');
 const typeDefs = require('./src/graphql/typeDefs');
 const resolvers = require('./src/graphql/resolvers');
 
+// --- ROBUST TOKEN EXTRACTION FUNCTION ---
+const getUser = (token) => {
+  // 1. Check if the token exists AND starts with the required "Bearer " prefix
+  if (token && token.startsWith('Bearer ')) {
+    // 2. Safely remove the "Bearer " prefix to get the raw token string
+    const tokenString = token.substring(7); 
+    try {
+      // 3. Verify the token using your JWT_SECRET
+      return jwt.verify(tokenString, process.env.JWT_SECRET);
+    } catch (err) {
+      // 4. Log failure (e.g., token expired or tampered)
+      console.error("JWT Verification failed:", err.message); 
+      return null;
+    }
+  }
+  // If token is missing or malformed, return null
+  return null;
+};
+
 const startServer = async () => {
   const app = express();
 
-  // 1. ENABLE ROBUST CORS
-  // This allows your frontend (localhost:5173) to connect without "Network Errors"
+  // 1. CORS
   app.use(cors({
     origin: '*', 
     credentials: true
@@ -21,29 +39,21 @@ const startServer = async () => {
 
   await connectDB();
 
-  // 2. CONTEXT MIDDLEWARE (User Auth)
-  const getUser = (token) => {
-    if (token) {
-      try {
-        return jwt.verify(token.replace('Bearer ', ''), process.env.JWT_SECRET);
-      } catch (err) {
-        return null;
-      }
-    }
-    return null;
-  };
-
+  // 2. APOLLO SERVER CONTEXT
   const server = new ApolloServer({
     typeDefs,
     resolvers,
     context: ({ req }) => {
+      // Get the authorization header value
       const token = req.headers.authorization || '';
-      const user = getUser(token);
+      // Decode the user payload
+      const user = getUser(token); 
+      // Attach the user (containing id and role) to the context
       return { user };
     },
-    // 3. ERROR LOGGING (Crucial for debugging)
+    // 3. ERROR LOGGING 
     formatError: (err) => {
-      console.error("GRAPHQL ERROR:", err); // Prints actual error to your terminal
+      console.error("GRAPHQL ERROR:", err); 
       return err;
     },
   });

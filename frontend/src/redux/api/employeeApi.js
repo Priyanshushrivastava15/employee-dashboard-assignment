@@ -39,7 +39,7 @@ export const employeeApi = createApi({
   tagTypes: ['Employee', 'Class'],
   endpoints: (builder) => ({
 
-    // The health query (not strictly necessary but left for robustness)
+    // --- 1. HEALTH CHECK QUERY (Required for StatusCheck.jsx) ---
     getHealth: builder.query({
       query: () => ({
         document: gql`
@@ -50,10 +50,10 @@ export const employeeApi = createApi({
       }),
     }),
     
-    // --- 2. QUERY EMPLOYEE DATA (FIXED) ---
+    // --- 2. QUERY EMPLOYEE DATA (Fixed and Cleaned) ---
     getEmployees: builder.query({
       query: ({ page, limit, sortBy, filter }) => ({
-        // FIXED: Changed "EmployeeFilterInput" to "EmployeeFilter"
+        // FIXED: Using "EmployeeFilter" (as defined in typeDefs.js)
         document: gql`
           query GetEmployees($page: Int, $limit: Int, $sortBy: String, $filter: EmployeeFilter) {
             getEmployees(page: $page, limit: $limit, sortBy: $sortBy, filter: $filter) {
@@ -65,7 +65,7 @@ export const employeeApi = createApi({
                 class
                 subjects
                 attendance
-                # Removed status and performance fields to match schema
+                # Removed status and performance fields to match the schema
               }
               totalPages
               currentPage
@@ -98,7 +98,7 @@ export const employeeApi = createApi({
       providesTags: (result, error, id) => [{ type: 'Employee', id }],
     }),
     
-    // --- 3. DYNAMIC FILTER QUERY ---
+    // Dynamic Filter Query
     getUniqueClasses: builder.query({
       query: () => ({
         document: gql`
@@ -110,7 +110,7 @@ export const employeeApi = createApi({
       providesTags: ['Class'],
     }),
 
-    // --- 4. MUTATIONS (ADMIN ONLY) ---
+    // Mutations
     addEmployee: builder.mutation({
       query: (employeeData) => ({
         document: gql`

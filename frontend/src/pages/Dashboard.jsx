@@ -229,7 +229,7 @@ function Dashboard() {
           
           {/* Header & Actions */}
           <div className="flex flex-col gap-6 mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"> {/* FIX 1: Changed items-end to items-start */}
               <div>
                 <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Overview</h2>
                 <p style={{ color: 'var(--text-secondary)' }}>Page {currentPage} of {totalPages}</p>
@@ -238,7 +238,7 @@ function Dashboard() {
               {user?.role === 'admin' && (
                 <button 
                   onClick={handleOpenAdd}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-white shadow-lg shadow-[var(--accent)]/20 transition-all hover:scale-105 active:scale-95 shrink-0"
+                  className="flex items-center justify-center w-full md:w-auto gap-2 px-6 py-2.5 rounded-xl font-bold text-white shadow-lg shadow-[var(--accent)]/20 transition-all hover:scale-105 active:scale-95 shrink-0" /* FIX 2: Added justify-center w-full md:w-auto */
                   style={{ background: 'linear-gradient(135deg, var(--accent), #6366f1)' }}
                 >
                   <Plus size={20} />

@@ -52,7 +52,7 @@ const Login = () => {
         token: data.login.token 
       }));
 
-      // Note: No explicit navigate('/') is needed here, as the useEffect hook handles the redirect immediately after setCredentials updates the token state.
+      // No explicit navigate('/') is needed here, as the useEffect hook handles the redirect immediately after setCredentials updates the token state.
       
     } catch (err) {
       console.error(err);

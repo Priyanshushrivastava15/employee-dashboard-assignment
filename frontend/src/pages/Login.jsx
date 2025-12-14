@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux'; // <-- Import useSelector
 import { setCredentials } from '../redux/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
@@ -14,6 +14,18 @@ const Login = () => {
   
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // 1. Check Redux state for existing token
+  const token = useSelector((state) => state.auth.token);
+
+  // --- NEW LOGIC: Redirect Guard ---
+  useEffect(() => {
+    if (token) {
+      // If a token exists, the user is already logged in. Redirect to Dashboard.
+      navigate('/', { replace: true });
+    }
+  }, [token, navigate]); 
+  // ---------------------------------
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,16 +52,24 @@ const Login = () => {
         token: data.login.token 
       }));
 
-      navigate('/');
+      // Note: No explicit navigate('/') is needed here, as the useEffect hook handles the redirect immediately after setCredentials updates the token state.
       
     } catch (err) {
       console.error(err);
-      // More helpful error message
       setError('Invalid Credentials. Please check username/password and ensure the server is active.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // 2. Prevent rendering the form if the token exists (while the redirect is executing)
+  if (token) {
+      return (
+         <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <div className="w-12 h-12 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+         </div>
+      );
+  }
 
   return (
     // Updated background to use theme variable

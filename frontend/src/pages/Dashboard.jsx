@@ -13,9 +13,11 @@ import Sidebar from '../components/Sidebar';
 import EmployeeGrid from '../components/EmployeeGrid';
 import EmployeeTile from '../components/EmployeeTile';
 import Modal from '../components/Modal';
+// Note: We are using a basic spinner for loading (no Loader2 needed)
 import { Plus, X, Search, Filter, ArrowUpDown, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'; 
 import { setSidebar, setPage, toggleFlag } from '../redux/slices/uiSlice';
 
+// --- Single Employee Detail View (Popup) ---
 const ExpandedView = ({ employeeId, onClose }) => {
   const { data, isLoading, error } = useGetEmployeeQuery(employeeId);
   const emp = data?.getEmployee;
@@ -23,7 +25,7 @@ const ExpandedView = ({ employeeId, onClose }) => {
   if (!employeeId) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
       <div className="glass-panel w-full max-w-2xl rounded-2xl p-8 relative shadow-2xl">
         <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-black/10 rounded-full transition-colors" style={{ color: 'var(--text-secondary)' }}>
           <X size={24} />
@@ -31,23 +33,24 @@ const ExpandedView = ({ employeeId, onClose }) => {
         
         {isLoading ? (
           <div className="flex flex-col items-center py-10 gap-4">
+            {/* Simple spinner */}
             <div className="w-12 h-12 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div> 
-            <p style={{ color: 'var(--text-secondary)' }}>Loading employee details...</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
           </div>
         ) : error ? (
-          <div className="text-red-500 text-center py-10">Error loading details.</div>
+          <div className="text-red-500 text-center py-10">Failed to load details.</div>
         ) : (
           <>
             <div className="flex items-center gap-6 mb-8">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[var(--accent)] to-purple-600 flex items-center justify-center text-white text-4xl font-bold">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[var(--accent)] to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-xl">
                 {emp.name.charAt(0)}
               </div>
               <div>
                 <div className="flex items-center gap-3">
                    <h2 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{emp.name}</h2>
-                   <span className="px-2 py-1 rounded text-xs font-mono bg-black/20 text-[var(--text-secondary)]">#{emp.employeeId}</span>
+                   <span className="px-2 py-1 rounded text-xs font-mono bg-black/20 text-[var(--text-secondary)]">#{emp.employeeId || 'N/A'}</span>
                 </div>
-                <p className="text-lg opacity-80" style={{ color: 'var(--text-secondary)' }}>Class {emp.class}</p>
+                <p className="text-lg opacity-80" style={{ color: 'var(--text-secondary)' }}>Class: {emp.class}</p>
               </div>
             </div>
 
@@ -79,10 +82,11 @@ const ExpandedView = ({ employeeId, onClose }) => {
   );
 };
 
-export default function Dashboard() {
-  const dispatch = useDispatch();
+// --- Main Dashboard Component ---
+function Dashboard() {
   const { viewMode, theme, isSidebarOpen, page, flaggedIds } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
   const LIMIT = 10;
   const currentPage = Number(page) || 1;
@@ -92,6 +96,7 @@ export default function Dashboard() {
   const [filterClass, setFilterClass] = useState('');
   const [sortBy, setSortBy] = useState('name');
 
+  // Query Employees
   const { data, isLoading, error } = useGetEmployeesQuery({ 
     page: currentPage, 
     limit: LIMIT,
@@ -102,7 +107,10 @@ export default function Dashboard() {
     }
   });
 
+  // Query Unique Classes
   const { data: classData } = useGetUniqueClassesQuery();
+  const availableClasses = classData?.getUniqueClasses || [];
+
   const [deleteEmployee] = useDeleteEmployeeMutation();
   const [addEmployee] = useAddEmployeeMutation();
   const [updateEmployee] = useUpdateEmployeeMutation();
@@ -115,123 +123,258 @@ export default function Dashboard() {
   const employees = data?.getEmployees?.employees || [];
   const totalPages = data?.getEmployees?.totalPages || 1;
 
+  // Sync Theme
   useEffect(() => {
     const activeTheme = theme === 'holo' ? 'aurora' : theme;
     document.documentElement.setAttribute('data-theme', activeTheme);
   }, [theme]);
 
+  // Handle Mobile Sidebar
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) dispatch(setSidebar(false));
+      if (window.innerWidth < 768) {
+        dispatch(setSidebar(false));
+      }
     };
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [dispatch]);
 
+  const handleDelete = async (id) => {
+    if(confirm("Delete record?")) await deleteEmployee(id);
+  };
+
+  const handleEdit = (emp) => {
+    setEditingId(emp.id); 
+    setFormData({ 
+      name: emp.name, 
+      age: emp.age, 
+      class: emp.class, 
+      subjects: emp.subjects ? emp.subjects.join(', ') : '', 
+      attendance: emp.attendance 
+    });
+    setIsModalOpen(true); 
+  };
+
+  const handleFlag = (emp) => { 
+    dispatch(toggleFlag(emp.id));
+  };
+
+  const handleOpenAdd = () => {
+    setEditingId(null);   
+    setFormData({ name: '', age: '', class: '', subjects: '', attendance: '' }); 
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const subjectsArray = formData.subjects.split(',').map(s => s.trim()).filter(Boolean);
-      const payload = { ...formData, age: Number(formData.age), attendance: Number(formData.attendance), subjects: subjectsArray };
+      const subjectsArray = formData.subjects.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const payload = {
+        name: formData.name,
+        age: Number(formData.age),
+        class: formData.class,
+        subjects: subjectsArray.length ? subjectsArray : ["General"],
+        attendance: Number(formData.attendance)
+      };
 
       if (editingId) await updateEmployee({ id: editingId, ...payload }).unwrap();
       else await addEmployee(payload).unwrap();
       setIsModalOpen(false);
     } catch (err) {
-      alert("Failed to save record.");
+      console.error(err);
+      alert("Operation failed. Check inputs.");
     }
   };
 
   if (isLoading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      <div className="w-10 h-10 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p>Loading records...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <div className="w-12 h-12 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+      <p>Fetching Employee Data...</p>
     </div>
   );
 
+  if (error) {
+    console.error("Dashboard Error:", error);
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        <AlertCircle size={48} className="text-red-500 mb-2" />
+        <h2 className="text-2xl font-bold">Connection Error</h2>
+        <p className="max-w-md opacity-70">
+          We couldn't connect to the server. Please ensure your backend is running.
+        </p>
+        <div className="bg-black/10 p-4 rounded-lg text-xs font-mono text-left w-full max-w-lg overflow-auto border border-red-500/20">
+          {JSON.stringify(error, null, 2)}
+        </div>
+        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[var(--accent)] text-white rounded-lg mt-4">
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const isEmpty = !employees.length;
+
   return (
-    <div className="min-h-screen transition-all" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-screen transition-colors duration-500" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Sidebar />
-      <div className={`transition-all duration-300 ${isSidebarOpen ? 'md:ml-72' : 'md:ml-20'}`}>
+      
+      <div className={`transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col ${isSidebarOpen ? 'md:ml-72' : 'md:ml-20'}`}>
         <Navbar />
         {expandedEmpId && <ExpandedView employeeId={expandedEmpId} onClose={() => setExpandedEmpId(null)} />}
 
-        <main className="p-4 md:p-6 pb-20">
+        <main className="px-4 md:px-6 pb-20">
+          
+          {/* Header & Actions */}
           <div className="flex flex-col gap-6 mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"> {/* FIX 1: Changed items-end to items-start */}
               <div>
-                <h2 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Dashboard</h2>
+                <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Overview</h2>
                 <p style={{ color: 'var(--text-secondary)' }}>Page {currentPage} of {totalPages}</p>
               </div>
 
               {user?.role === 'admin' && (
                 <button 
-                  onClick={() => { setEditingId(null); setFormData({ name: '', age: '', class: '', subjects: '', attendance: '' }); setIsModalOpen(true); }}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-white shadow-lg"
+                  onClick={handleOpenAdd}
+                  className="flex items-center justify-center w-full md:w-auto gap-2 px-6 py-2.5 rounded-xl font-bold text-white shadow-lg shadow-[var(--accent)]/20 transition-all hover:scale-105 active:scale-95 shrink-0" /* FIX 2: Added justify-center w-full md:w-auto */
                   style={{ background: 'linear-gradient(135deg, var(--accent), #6366f1)' }}
                 >
-                  <Plus size={20} /> Add Employee
+                  <Plus size={20} />
+                  <span>Add Record</span>
                 </button>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl border backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-               <div className="relative w-full sm:flex-1">
-                  <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+            {/* --- FILTERS BAR (RESPONSIVE FIX) --- */}
+            <div 
+              className="flex flex-wrap items-center gap-4 p-4 rounded-xl border backdrop-blur-sm"
+              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+            >
+               {/* Search Input: w-full on mobile, flex-1 on SM+ */}
+               <div className="relative group w-full sm:flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-[var(--accent)]" size={18} />
                   <input 
-                    type="text" placeholder="Search..." 
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border bg-transparent outline-none"
-                    style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    type="text" 
+                    placeholder="Search name, subject..." 
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border outline-none focus:ring-2 transition-all"
+                    style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }}
                     value={searchTerm}
                     onChange={(e) => { setSearchTerm(e.target.value); dispatch(setPage(1)); }}
                   />
                </div>
                
+               <div className="h-8 w-px bg-[var(--border)] hidden sm:block"></div>
+
+               {/* Class Filter */}
+               <div className="flex items-center gap-2 text-sm font-medium shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                 <Filter size={16} />
+                 <span>Filter:</span>
+               </div>
+               
                <select 
-                 className="p-2 rounded-lg border text-sm w-full sm:w-auto"
+                 // Make select w-full on mobile, auto width on SM+
+                 className="p-2 rounded-lg border text-sm outline-none focus:ring-2 cursor-pointer w-full sm:w-auto min-w-[140px]"
                  style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                  value={filterClass}
                  onChange={(e) => { setFilterClass(e.target.value); dispatch(setPage(1)); }}
                >
                  <option value="">All Classes</option>
-                 {classData?.getUniqueClasses?.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                 {availableClasses.map((cls) => (
+                   <option key={cls} value={cls}>{cls}</option>
+                 ))}
                </select>
 
+               {/* Sort Dropdown: Removed unnecessary ml-2 */}
+               <div className="flex items-center gap-2 text-sm font-medium shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                 <ArrowUpDown size={16} />
+                 <span>Sort:</span>
+               </div>
+
                <select 
-                 className="p-2 rounded-lg border text-sm w-full sm:w-auto"
+                 // Make select w-full on mobile, auto width on SM+
+                 className="p-2 rounded-lg border text-sm outline-none focus:ring-2 cursor-pointer w-full sm:w-auto min-w-[140px]"
                  style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                  value={sortBy}
                  onChange={(e) => setSortBy(e.target.value)}
                >
                  <option value="name">Name (A-Z)</option>
+                 <option value="age">Age (Youngest)</option>
                  <option value="attendance">Attendance (Low)</option>
                  <option value="-attendance">Attendance (High)</option>
                </select>
             </div>
           </div>
 
-          {viewMode === 'grid' ? (
-             <div className="overflow-x-auto"><EmployeeGrid employees={employees} userRole={user?.role} onExpand={setExpandedEmpId} /></div>
+          {/* --- CONTENT AREA --- */}
+          {isEmpty ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl border border-dashed" style={{ borderColor: 'var(--border)' }}>
+              <p className="opacity-50" style={{ color: 'var(--text-secondary)' }}>No records found matching your criteria.</p>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="overflow-x-auto pb-4">
+               <EmployeeGrid 
+                 employees={employees} 
+                 flaggedIds={flaggedIds} 
+                 startIndex={startIndex}
+                 onDelete={handleDelete} 
+                 onEdit={handleEdit} 
+                 onFlag={handleFlag} 
+                 onExpand={(emp) => setExpandedEmpId(emp.id)} 
+                 userRole={user?.role} 
+               />
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {employees.map(emp => <EmployeeTile key={emp.id} emp={emp} userRole={user?.role} onExpand={setExpandedEmpId} />)}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {employees.map(emp => (
+                <EmployeeTile 
+                  key={emp.id} 
+                  emp={emp} 
+                  isFlagged={flaggedIds.includes(emp.id)} 
+                  onDelete={handleDelete} 
+                  onEdit={handleEdit} 
+                  onFlag={handleFlag} 
+                  onExpand={(emp) => setExpandedEmpId(emp.id)} 
+                  userRole={user?.role} 
+                />
+              ))}
+            </div>
+          )}
+
+          {/* --- PAGINATION --- */}
+          {!isEmpty && (
+            <div className="flex justify-center items-center gap-6 mt-12">
+              <button onClick={() => dispatch(setPage(Math.max(1, currentPage - 1)))} disabled={currentPage === 1} className="p-3 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all" style={{ color: 'var(--text-primary)' }}><ChevronLeft size={24} /></button>
+              <span className="font-mono font-bold px-4 py-2 rounded-lg bg-black/5" style={{ color: 'var(--text-primary)' }}>{currentPage} / {totalPages}</span>
+              <button onClick={() => dispatch(setPage(Math.min(totalPages, currentPage + 1)))} disabled={currentPage === totalPages} className="p-3 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all" style={{ color: 'var(--text-primary)' }}><ChevronRight size={24} /></button>
             </div>
           )}
         </main>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Edit" : "New"}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-           <input required placeholder="Name" className="w-full p-3 rounded-lg border bg-transparent" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-           <div className="grid grid-cols-2 gap-2">
-              <input type="number" required placeholder="Age" className="w-full p-3 rounded-lg border bg-transparent" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
-              <input required placeholder="Class" className="w-full p-3 rounded-lg border bg-transparent" value={formData.class} onChange={e => setFormData({...formData, class: e.target.value})} />
+      {/* --- ADD/EDIT MODAL --- */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Update Record" : "New Record"}>
+        <form onSubmit={handleSubmit} className="space-y-5">
+           <input required placeholder="Full Name" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+           <div className="grid grid-cols-2 gap-4">
+              <input type="number" required placeholder="Age" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }} value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
+              <input required placeholder="Class" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }} value={formData.class} onChange={e => setFormData({...formData, class: e.target.value})} />
            </div>
-           <input placeholder="Subjects (comma separated)" className="w-full p-3 rounded-lg border bg-transparent" value={formData.subjects} onChange={e => setFormData({...formData, subjects: e.target.value})} />
-           <input type="number" required placeholder="Attendance %" className="w-full p-3 rounded-lg border bg-transparent" value={formData.attendance} onChange={e => setFormData({...formData, attendance: e.target.value})} />
-           <button type="submit" className="w-full py-3 rounded-lg font-bold text-white bg-[var(--accent)]">Save</button>
+           <input required placeholder="Subjects (e.g. Math, Science)" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }} value={formData.subjects} onChange={e => setFormData({...formData, subjects: e.target.value})} />
+           <input type="number" required placeholder="Attendance %" className="w-full p-3 rounded-xl bg-black/5 border outline-none focus:ring-2" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', '--tw-ring-color': 'var(--accent)' }} value={formData.attendance} onChange={e => setFormData({...formData, attendance: e.target.value})} />
+           
+           <button 
+             type="submit" 
+             className="w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity" 
+             style={{ background: 'var(--accent)' }}
+           >
+             {editingId ? "Update Record" : "Add Record"}
+           </button>
         </form>
       </Modal>
     </div>
   );
 }
+
+export default Dashboard;
